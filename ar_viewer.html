@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JARVIS — AR COMPONENT VIEWER</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            background-color: #0a0a0f;
+            color: #00d4ff;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #viewport {
+            width: 70vw;
+            height: 100vh;
+        }
+
+        #info-panel {
+            width: 30vw;
+            height: 100vh;
+            background: rgba(10, 10, 15, 0.9);
+            border-left: 2px solid #ffd700;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: #ffd700;
+            border-bottom: 1px solid #ffd700;
+            padding-bottom: 5px;
+        }
+
+        #device-status {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            color: #ffd700;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        #component-name {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        #component-desc {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 10px 20px;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 15px #00d4ff;
+        }
+
+        button.active {
+            background: #00d4ff;
+            color: #0a0a0f;
+        }
+
+        #floating-label {
+            position: fixed;
+            background: rgba(0, 212, 255, 0.8);
+            color: #0a0a0f;
+            padding: 5px 12px;
+            pointer-events: none;
+            display: none;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 100;
+            clip-path: polygon(0% 0%, 100% 0%, 90% 100%, 0% 100%);
+        }
+
+        .hud-line {
+            height: 1px;
+            background: linear-gradient(90deg, #00d4ff, transparent);
+            margin: 10px 0;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 70vw;
+            height: 100vh;
+            pointer-events: none;
+            background-image: 
+                radial-gradient(circle at 2px 2px, rgba(0, 212, 255, 0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #ffd70033;
+        }
+
+        .tl { top: 20px; left: 20px; border-right: 0; border-bottom: 0; }
+        .tr { top: 20px; right: 20px; border-left: 0; border-bottom: 0; }
+        .bl { bottom: 20px; left: 20px; border-right: 0; border-top: 0; }
+        .br { bottom: 20px; right: 20px; border-left: 0; border-top: 0; }
+
+    </style>
+</head>
+<body>
+
+<div id="viewport"></div>
+<div id="ui-overlay">
+    <div class="corner-bracket tl"></div>
+    <div class="corner-bracket tr"></div>
+    <div class="corner-bracket bl"></div>
+    <div class="corner-bracket br"></div>
+</div>
+
+<div id="floating-label">COMPONENT</div>
+
+<div id="controls">
+    <button id="teardown-btn">Teardown</button>
+    <button id="reassemble-btn" class="active">Assembled</button>
+</div>
+
+<div id="info-panel">
+    <h1>AR DEVICE ANALYZER</h1>
+    <div id="device-status">SCANNING INTERNAL TOPOLOGY...</div>
+    
+    <div class="hud-line"></div>
+    
+    <div class="section-header">OBJECT IDENTIFICATION</div>
+    <div id="target-label" style="font-size: 1.1rem; margin-bottom: 20px;">[ CELL PHONE ]</div>
+    
+    <div class="section-header">CORE COMPONENT</div>
+    <div id="component-name">SELECT COMPONENT</div>
+    
+    <div class="hud-line"></div>
+    
+    <div class="section-header">TECHNICAL DATA</div>
+    <div id="component-desc">Hover over internal components to view structural data and technical specifications.</div>
+
+    <div style="margin-top: auto; font-size: 0.6rem; opacity: 0.5;">
+        STARK INDUSTRIES - TACTICAL OVERLAY v3.4<br>
+        CRYPTO-SHIELD: ACTIVE<br>
+        DATA LINK: ESTABLISHED (8765/WS)
+    </div>
+</div>
+
+<script>
+    // Configuration Data
+    const COMPONENT_DATA = {
+        "cell_phone": {
+            "name": "SMARTPHONE ALPHA-7",
+            "parts": [
+                { id: "screen", name: "OLED Display", desc: "6.7-inch Super Retina XDR. 2778x1284 pixels at 458 ppi. ProMotion technology with adaptive refresh rates up to 120Hz.", color: 0x00d4ff, y: 0.1 },
+                { id: "body", name: "Chassis", desc: "Aerospace-grade aluminum frame. Houses internal sub-assemblies and provides structural integrity.", color: 0x222222, y: 0 },
+                { id: "battery", name: "Li-Ion Battery", desc: "4,323 mAh high-density cell. Fast charging capable. Integrated thermal management for extended longevity.", color: 0x44ff44, y: -0.05, dx: -0.5 },
+                { id: "chip", name: "A15 Processor", desc: "5-nanometer technology. 6-core CPU with 2 performance and 4 efficiency cores. 16-core Neural Engine.", color: 0xff4444, y: 0.1, dx: 0.4, dz: -0.5 },
+                { id: "motherboard", name: "Logic Board", desc: "Custom-layered PCB with integrated cellular modem, WiFi-6E controller, and security enclave.", color: 0x008800, y: -0.01 },
+                { id: "cameras", name: "Camera Module", desc: "12MP Main / Ultra-Wide / Telephoto array. Sensor-shift optical image stabilization. Cinematic mode support.", color: 0x888888, y: 0.2, dz: 1.2 }
+            ]
+        },
+        "default": {
+            "name": "GENERIC DEVICE",
+            "parts": [
+                { id: "body", name: "Main Housing", desc: "Structural enclosure for generic electronic component.", color: 0x444444, y: 0 },
+                { id: "chip", name: "Processing Unit", desc: "Central control unit for operations.", color: 0xff0000, y: 0.2 }
+            ]
+        }
+    };
+
+    // Global Variables
+    let scene, camera, renderer, parts = [];
+    let raycaster = new THREE.Raycaster();
+    let mouse = new THREE.Vector2();
+    let isExploded = false;
+    let hoveredPart = null;
+
+    // Initialization
+    function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const deviceType = urlParams.get('device') || 'cell_phone';
+        const data = COMPONENT_DATA[deviceType] || COMPONENT_DATA["default"];
+
+        document.getElementById('target-label').textContent = "[ " + data.name + " ]";
+
+        // Scene Setup
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, (window.innerWidth * 0.7) / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+        camera.position.y = 1;
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth * 0.7, window.innerHeight);
+        document.getElementById('viewport').appendChild(renderer.domElement);
+
+        // Lights
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Build Model
+        createDeviceModel(data);
+
+        // Listeners
+        window.addEventListener('mousemove', onMouseMove);
+        document.getElementById('teardown-btn').addEventListener('click', explode);
+        document.getElementById('reassemble-btn').addEventListener('click', assemble);
+        window.addEventListener('resize', onWindowResize);
+
+        animate();
+    }
+
+    function createDeviceModel(data) {
+        const group = new THREE.Group();
+        
+        data.parts.forEach(p => {
+            let geometry;
+            let mesh;
+            
+            if (p.id === 'screen') {
+                geometry = new THREE.BoxGeometry(2.5, 5, 0.1);
+            } else if (p.id === 'body') {
+                geometry = new THREE.BoxGeometry(2.6, 5.1, 0.4);
+            } else if (p.id === 'battery') {
+                geometry = new THREE.BoxGeometry(1, 3.5, 0.2);
+            } else if (p.id === 'chip') {
+                geometry = new THREE.BoxGeometry(0.8, 0.8, 0.1);
+            } else if (p.id === 'cameras') {
+                geometry = new THREE.BoxGeometry(1, 1, 0.2);
+            } else {
+                geometry = new THREE.BoxGeometry(2, 4, 0.2);
+            }
+
+            const material = new THREE.MeshPhongMaterial({ 
+                color: p.color, 
+                transparent: true, 
+                opacity: 0.9,
+                shininess: 100
+            });
+            mesh = new THREE.Mesh(geometry, material);
+            
+            // Set initial position
+            mesh.position.set(p.dx || 0, p.y || 0, p.dz || 0);
+            
+            // Store data
+            mesh.userData = p;
+            mesh.userData.basePos = mesh.position.clone();
+            
+            scene.add(mesh);
+            parts.push(mesh);
+        });
+    }
+
+    function onMouseMove(event) {
+        mouse.x = (event.clientX / (window.innerWidth * 0.7)) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Label update
+        const label = document.getElementById('floating-label');
+        if (hoveredPart) {
+            label.style.display = 'block';
+            label.style.left = (event.clientX + 15) + 'px';
+            label.style.top = (event.clientY - 15) + 'px';
+            label.textContent = hoveredPart.userData.name;
+        } else {
+            label.style.display = 'none';
+        }
+    }
+
+    function explode() {
+        if (isExploded) return;
+        isExploded = true;
+        
+        document.getElementById('teardown-btn').classList.add('active');
+        document.getElementById('reassemble-btn').classList.remove('active');
+        document.getElementById('device-status').textContent = "CRITICAL ANALYSIS: TEARDOWN COMPLETE";
+
+        parts.forEach((p, i) => {
+            const data = p.userData;
+            // Explode along Z-axis mostly, with some spread
+            gsap.to(p.position, {
+                z: (i * 1.2) - (parts.length / 2),
+                x: (p.userData.basePos.x * 2) || (Math.random() - 0.5) * 2,
+                y: p.userData.basePos.y * 1.5,
+                duration: 1.5,
+                ease: "power2.out"
+            });
+            gsap.to(p.rotation, {
+                y: Math.PI / 4,
+                duration: 1.5
+            });
+        });
+    }
+
+    function assemble() {
+        if (!isExploded) return;
+        isExploded = false;
+
+        document.getElementById('reassemble-btn').classList.add('active');
+        document.getElementById('teardown-btn').classList.remove('active');
+        document.getElementById('device-status').textContent = "SYSTEM READY: ARCHITECTURE ASSEMBLED";
+
+        parts.forEach(p => {
+            gsap.to(p.position, {
+                x: p.userData.basePos.x,
+                y: p.userData.basePos.y,
+                z: p.userData.basePos.z,
+                duration: 1.5,
+                ease: "power3.inOut"
+            });
+            gsap.to(p.rotation, {
+                y: 0,
+                duration: 1.5
+            });
+        });
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Raycasting
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(parts);
+
+        if (intersects.length > 0) {
+            const part = intersects[0].object;
+            if (hoveredPart !== part) {
+                if (hoveredPart) hoveredPart.material.emissive.setHex(0x000000);
+                hoveredPart = part;
+                hoveredPart.material.emissive.setHex(0x00d4ff);
+                
+                // Update panel
+                document.getElementById('component-name').textContent = part.userData.name;
+                document.getElementById('component-desc').textContent = part.userData.desc;
+                
+                gsap.to(document.getElementById('info-panel'), { borderLeftColor: '#00d4ff', duration: 0.3 });
+            }
+        } else {
+            if (hoveredPart) {
+                hoveredPart.material.emissive.setHex(0x000000);
+                gsap.to(document.getElementById('info-panel'), { borderLeftColor: '#ffd700', duration: 0.3 });
+            }
+            hoveredPart = null;
+        }
+
+        // Slow rotate group
+        parts.forEach(p => {
+            if (!isExploded) p.rotation.y += 0.005;
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+        camera.aspect = (window.innerWidth * 0.7) / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth * 0.7, window.innerHeight);
+    }
+
+    init();
+
+</script>
+
+</body>
+</html>

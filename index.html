@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>J.A.R.V.I.S</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html {
+      background: transparent !important;
+    }
+    body {
+      background: transparent !important;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #app {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: transparent;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* Fullscreen mode — dark bg */
+    body.fullscreen-mode canvas {
+      background: #000000 !important;
+    }
+    /* Corner mode — transparent */
+    body.corner-mode canvas {
+      background: transparent !important;
+    }
+    body.corner-mode #fullscreen-ui {
+      display: none !important;
+    }
+    body.corner-mode #bottom-bar {
+      display: none !important;
+    }
+    body.corner-mode #top-bar {
+      display: none !important;
+    }
+    body.corner-mode #chat-panel {
+      display: none !important;
+    }
+    body.corner-mode #mic-panel {
+      display: none !important;
+    }
+  </style>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="fullscreen-mode">
+<div id="app">
+
+  <canvas id="jarvis-canvas"></canvas>
+
+  <div id="fullscreen-ui" class="ui-layer">
+
+    <div id="top-bar">
+      <div id="system-stats">
+        <span id="cpu-stat">CPU: 0%</span>
+        <span id="ram-stat">RAM: 0%</span>
+        <span id="bat-stat">BAT: 0%</span>
+      </div>
+      <div id="title-bar">
+        <span id="stark-logo">◈</span>
+        STARK INDUSTRIES — J.A.R.V.I.S 
+      </div>
+      <div id="top-right">
+        <span id="clock">00:00:00</span>
+        <span id="date-display">MON, 01 JAN</span>
+        <button id="mode-toggle-btn"
+          onclick="toggleMode()">⊡</button>
+        <button id="close-btn"
+          onclick="closeWindow()">×</button>
+      </div>
+    </div>
+
+    <div id="center-area">
+      <div id="brain-area">
+        <div id="brain-status">
+          <span id="status-text">
+            ◈ SYSTEM ONLINE</span>
+          <div id="status-bar">
+            <div id="status-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div id="chat-panel">
+        <div id="chat-header">
+          <span>◈ COMMUNICATION INTERFACE</span>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area">
+          <span id="input-prompt">◈</span>
+          <input type="text"
+                 id="chat-input"
+                 placeholder="Speak or type Sir...">
+          <button id="send-btn"
+                  onclick="sendMessage()">
+            SEND ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="bottom-bar">
+      <div>MOOD: <span id="mood-text">
+        😐 NEUTRAL</span></div>
+      <div>AI: <span id="ai-mode">
+        🔒 OFFLINE</span></div>
+      <div>GESTURE: <span id="gesture-text">
+        NONE</span></div>
+    </div>
+
+  </div>
+
+  <div id="mic-panel">
+    <button id="mic-toggle-btn"
+            onclick="toggleMicPanel()">
+      🎤 MIC</button>
+    <div id="mic-dropdown"
+         style="display:none;">
+      <div class="mic-header">
+        ◈ SELECT MICROPHONE
+      </div>
+      <div id="mic-list"></div>
+    </div>
+  </div>
+
+  <!-- Corner Mode Chatbot -->
+  <div id="corner-chatbot" style="display:none">
+      <!-- Chat messages -->
+      <div id="corner-messages"></div>
+      
+      <!-- Input area -->
+      <div id="corner-input-area">
+          <input type="text" id="corner-input" placeholder="Ask JARVIS..." autocomplete="off" />
+          <button id="corner-send">➤</button>
+          <button id="corner-mic">🎤</button>
+      </div>
+  </div>
+
+  <!-- Corner mode click to expand -->
+  <div id="corner-expand-hint"
+       style="display:none;
+              position:absolute;
+              bottom:5px;
+              left:0;right:0;
+              text-align:center;
+              color:rgba(255,184,0,0.5);
+              font-size:8px;
+              font-family:Courier New;
+              letter-spacing:2px;
+              pointer-events:none;">
+    CLICK TO EXPAND
+  </div>
+
+  <div id="news-card" class="news-card-hidden">
+    <div class="news-header">
+      <span>INTELLIGENCE BRIEFING</span>
+      <span id="news-timestamp">Just now</span>
+    </div>
+    <div id="news-headline"></div>
+    <ul id="news-bullets"></ul>
+    <div class="news-footer" id="news-sources"></div>
+    <div class="news-close" onclick="document.getElementById('news-card').classList.remove('news-card-visible'); document.getElementById('news-card').classList.add('news-card-hidden');">✖</div>
+  </div>
+
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./node_modules/three/build/three.module.js",
+    "three/addons/": "./node_modules/three/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
